@@ -3,6 +3,7 @@ import cors from 'cors';
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from 'dayjs'
+import  joi  from "joi";
 
 
 //Config
@@ -15,6 +16,14 @@ app.use(cors());
 app.use(express.json());
 //Collections
 
+const userSchema = joi.object({
+  name: joi.string().required(),
+});
+const msgSchema = joi.object({
+    to: joi.string().required().min(1),
+    text:  joi.string().required().min(1),
+    type:  joi.string().required().valid("message", "private_message")
+});
 
 try {
   await mongoClient.connect();
@@ -29,8 +38,9 @@ const participants = db.collection("participants")
 app.post("/participants", async (req, res) => {
 
   const { name } = req.body
+  const validation = userSchema.validate(req.body);
 
-  if (!name || typeof name !== "string") {
+  if (validation.error) {
     res.status(422).send("Todos os Campos São obrigatórios")
     return
   }
@@ -49,7 +59,7 @@ app.post("/participants", async (req, res) => {
     to: 'Todos',
     text: 'entra na sala...',
     type: 'status',
-    time: time
+    time: dayjs().format("HH:mm:ss")
   }
   try {
     messages.insertOne(msg)
@@ -80,20 +90,18 @@ app.post("/messages", async (req, res) => {
 
   const { to, text, type } = req.body;
   const { user } = req.headers;
+  const validation = msgSchema.validate(req.body);
 
-
-  const verTo = !to || typeof to !== "string" ? true : false;
-  const verText = !text || typeof text !== "string" ? true : false;
-  const verType = type !== "message" ? true : false;
+  
   //console.log(type !== 'private_message' )
 
   try {
 
     const part = await participants.find({ name: user }).toArray()
     const verFrom = part.length <= 0 ? true : false;
-    if (verTo || verText || verType || verFrom) {
+    if (validation.error || verFrom) {
       res.sendStatus(422);
-      console.log(type, verTo, verText, verType, verFrom)
+      
       return
     }
 
@@ -102,7 +110,7 @@ app.post("/messages", async (req, res) => {
       to: to,
       text: text,
       type: type,
-      time: time
+      time: dayjs().format("HH:mm:ss")
     }
 
     await messages.insertOne(msg);
@@ -156,12 +164,13 @@ app.post("/status", async (req, res) => {
 
   try {
     const part = await participants.find({ name: user }).toArray()
-    participants.updateOne({ name: user }, lastStatus)
+    
 
     if (part.length === 0) {
       res.sendStatus(404)
       return
     }
+    await participants.updateOne({ name: user }, lastStatus)
     res.sendStatus(200)
   } catch (error) {
     res.sendStatus(500);
@@ -181,9 +190,9 @@ setInterval( async ()=>{
   for (let index = 0; index < array.length; index++) {
     const element = array[index];
     const msg = {
-      from: element.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: time
+      from: element.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs().format("HH:mm:ss")
     }
-    console.log(Date.now() - element.lastStatus)
+    //console.log(Date.now() - element.lastStatus)
     if (Date.now() - element.lastStatus  >= 10000) {
       //console.log("oi")
       try {
