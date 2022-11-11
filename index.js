@@ -93,7 +93,7 @@ app.post("/messages", async (req, res) => {
   const validation = msgSchema.validate(req.body);
 
   
-  //console.log(type !== 'private_message' )
+  
 
   try {
 
@@ -133,7 +133,7 @@ app.get("/messages", async (req, res) => {
 
   if (!limit) {
     try {
-      const msg = await messages.find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
+      const msg = await messages.find({ $or: [{ from: user }, { to: user }, { to: "Todos" },{type: "message"}] }).toArray()
       
       res.status(200).send(msg)
       return
@@ -145,9 +145,9 @@ app.get("/messages", async (req, res) => {
 
   }
   try {
-    let doc = await messages.find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
+    let doc = await messages.find({ $or: [{ from: user }, { to: user }, { to: "Todos" },{type: "message"}] }).toArray()
     doc = doc.length;
-    const msg = await messages.find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).skip(doc-limit).limit(limit).toArray()
+    const msg = await messages.find({ $or: [{ from: user }, { to: user }, { to: "Todos" },{type: "message"}] }).skip(doc-limit).limit(limit).toArray()
     
     res.status(200).send(msg)
   } catch (error) {
